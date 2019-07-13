@@ -9,41 +9,38 @@
 
 library(shiny)
 library(tidyverse)
+source("said.R")
+
+
+c2p <- function() {
+  
+  result <- new.env(emptyenv())
+
+  result$said <- said("~/Desktop/XIX/wk-26/Hackathon 3.0/oxford university/challenge 9,10/said business school")
+  
+    
+  result
+}
+
+my_csv_dictionary <- c2p()
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
    # Application title
-   titlePanel("Old Faithful Geyser Data"),
+   titlePanel("CSV --> PSQL"),
    
-   # Sidebar with a slider input for number of bins 
-   sidebarLayout(
-      sidebarPanel(
-         sliderInput("bins",
-                     "Number of bins:",
-                     min = 1,
-                     max = 50,
-                     value = 30)
-      ),
-      
-      # Show a plot of the generated distribution
-      mainPanel(
-         plotOutput("distPlot")
-      )
-   )
+   tableOutput("said")
+   
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+ 
+
+   output$said <- renderTable( my_csv_dictionary$said$my_tables$Activities[[16]] %>% head() )
    
-   output$distPlot <- renderPlot({
-      # generate bins based on input$bins from ui.R
-      x    <- faithful[, 2] 
-      bins <- seq(min(x), max(x), length.out = input$bins + 1)
-      
-      # draw the histogram with the specified number of bins
-      hist(x, breaks = bins, col = 'darkgray', border = 'white')
-   })
+   
 }
 
 # Run the application 
