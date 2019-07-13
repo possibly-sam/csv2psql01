@@ -1,0 +1,125 @@
+---
+title: "us-gits"
+author: "Phillip Abbott"
+date: "July 10, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# US GITS
+
+*United States Government IT Services Said Business School Hack*
+
+![US Gits](logo.png)
+
+
+## CHALLENGE #9
+### Planning U.S. Government IT Projects
+* **Problem Statement:** This dataset offers a rich set of data that might contain valuable patterns that can aid project managers in defining projects, set of activities, their sequencing and the budget required. How can we make planning of IT projects easier?
+* **Output:** Can we identify similar projects? Are there archetypal clusters of projects with similar activities? What are standard activities in each project? What are the ranges of their costs and durations? 
+* **Type of Output:** Text Analytics, Topic Modelling, Dashboard 
+* **Benefit:** Confidence in project delivery, improved budgeting, focused investment
+
+
+
+# How we went about it
+
+Our team's challenge was to analyse data and present solutions for Saïd Business School with data from Planning US Government IT Projects. We used a mix of PowerBI, Python and R technologies, with interesting discussions. This time we called ourselves US Gits (United States Government IT Services). 
+
+## The Team
+
+* Anne-Marie:  Product Management
+* Annette:     Statistics
+* Ken:         Product Management
+* Liza:        Product Management
+* Phillip:     R
+* Ramin:       Python
+* Sam:         Student
+* Tom:         Power BI
+
+We charted our plan on the whiteboard.  Strongly recommended procedure to do as much up-front planning work prior to diving into the data.
+
+![Whiteboard](wall.jpeg)
+
+
+
+
+We had met a couple days before and had agreed to work on this challenge.  We felt that having the data in a single spreadsheet would make it easier to use on the day of the challenge.  This is how we had worked with risk data in the previous project hack.  Phillip collected data from the *activities*, *projects* and *business case* tables for 2014-2018.  Some columns were removed in the process because of inconsistencies between the tables for different years.  See below for a partial picture of the data invovled.
+
+
+![Schema](schema.png)
+
+
+
+It turned out that we didn't need to be so worried about de-normalizing the data; Tom was able to pull the spreadsheets directly into Power BI and link them appropriately.  
+
+Tom started to collect the data in PBI and worked with Anne-Marie & Liza on data discovery as well as on presenting different views of the information.  There are a lot of peculiarities with the data.  
+
+Meanwhile, Ramin started to run some natural language processing tools in python to find word counts in the textual data such as descriptions.  When that was created, Phillip used machine learning tools in R to identify clustering of projects and activities.  The following logic was attempted:
+
+* Categorize projects according to degree over/under plan
+* Seek to predict the category of the project based on textual information in the description
+* Given a new project and description, determine the predicted category -- if a given project shares traits with projects known to be over plan, it may be a warning sign
+
+Ken started working on the presentation while Annette checked the formal mathematical & statistical background of the work.  Anne-Marie & Liza also made significant contributions to the presentation.
+
+# Conclusion
+
+![Power BI](tom screenshot.png)
+
+Ken explained the background to the challenge, where it fit in relative to the previous challenge.  Risk data is believed to be skewed toward the optimistic.  The hope is that historical data such as that from the US IT site can be used to temper this optimism.  
+
+Tom was able to show how Power BI can give different views into the data including providing information about word frequency in activity descriptions.
+
+Phillip was able to use the machine learning functions (kmeans clustering) in R to group projects and identify the proposed location of an input project.  This was very preliminary as further work would need to be done to make the clustering sufficiently granular.
+
+
+![Clustering](clustering.png)
+
+
+## Our Approach to this Challenge
+
+![Approach](approach.png)
+
+
+## Implications of Our Work
+* Some input data is fundamentally flawed
+* Optimistic project delivery
+* Stakeholder appeasement
+* Supressing realistic forecast
+
+By identifying similar historic projects we can create the most relevant black swan curve thus allowing us to best calibrate our predictive analysis. 
+
+![Reference Class Forecasting](rcf.png)
+
+![Black Swan Lever](bsl.png)
+
+# Next Steps
+
+# Liza
+
+Had another great weekend recently at Project Data Analytics Community Project:Hack 3.0 with my team from 2.0 aka Flying Circus. Most of the team met up prior to the event, we agreed which challenge to work on and prioritised our activities. 
+
+Over the weekend, various master classes were available. Thank you to Mark Willcock for his insightful and fun discussion on the best visuals for data. 
+
+We were fortunate to have fascinating keynote speakers: Leanne Kemp ★★★ 康灵安 of Everledger and Nic Ryan. 
+
+My team's challenge was to analyse data and present solutions for Saïd Business School with data from Planning US Government IT Projects. We used a mix of PowerBI, Python and R technologies, with interesting discussions. This time we called ourselves US Gits (United States Government IT Services). 
+
+Many thanks to Martin Paver, Clare Johnston, James Smith PhD, Sir Robert McAlpine, Highways England, Saïd Business School, University of Oxford, PMO Flashmob and Microsoft Reactor for such a great event. 
+
+I highly recommend giving up a weekend to attend such events. The learning, sharing and networking make it worthwhile. 
+#ProjectManagement #Data #PowerBI
+
+
+
+
+
+
+
+
+

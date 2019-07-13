@@ -1,0 +1,250 @@
+---
+title: "ppsql"
+author: "Phillip Abbott"
+date: "July 12, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+
+```
+
+
+# Said:  import USIT data and un-normalize projects
+
+```{r}
+
+library(tidyverse)
+
+said <- function() {
+  result <- new.env(emptyenv())
+
+  result$my_tables <- list()
+    
+  fn <- function(the_name, the_year) {
+    read_csv( paste0("20", the_year, "/", the_name, ".csv"))
+  }
+  
+  fn_all <- function(the_name, the_years=13:18) {
+  
+    result$my_tables[[the_name]] <- list()
+    for (year in the_years)
+      result$my_tables[[the_name]][[year]] <- fn(the_name, year)
+    
+  }
+  
+  
+  # result$my_tables[["Projects"]] <- list()
+  # result$my_tables[["Projects"]][[18]] <- result$fn("Projects", 18)
+  
+  fn_all("Projects")
+  fn_all("Activities")
+  fn_all("BusinessCase", 16:18)
+  result
+  
+  # where you were:  read in for each of the available files.  
+  # merge where possible:  expand to NA
+  # do the joins
+  
+}
+
+# Projects18 <- read_csv("2018/Projects.csv")
+
+# Projects18 %>% colnames()
+
+
+q0 <- said()
+
+q0 %>% ls.str()
+
+```
+
+
+
+
+```{r}
+
+ppsql <- function(the_table_name) {
+  result <- new.env(emptyenv())
+  
+  kill <- function(it, s, target='') gsub(s,target, it, fixed=TRUE)
+  
+  bad_characters <- c(' ', '(', ')', '$', '.', ',', '%')
+  
+  get_safe_name <- function(it) {
+    for (k in bad_characters) it <- it %>% kill(k, '_')
+    it
+  }
+  
+  enquote <- function(it) paste0('"', it, '"')
+  result$make_column <- function(the_column_name, the_type='character varying') {
+    the_column_name <- the_column_name %>% get_safe_name()
+    paste('ALTER TABLE', paste0('public.', the_table_name %>% enquote()), 'ADD COLUMN', the_column_name %>% enquote(), the_type , ';')
+  }
+  
+  result
+}
+
+
+
+
+p01 <- ppsql('R02')
+'asdf' %>% p01$make_column() %>% writeLines()
+
+# ALTER TABLE public."Risks01" ADD COLUMN "Description" character varying;
+
+
+```
+
+# XL --> PSQL
+
+Suppose for the sake of argument that we are given a table.  We want to create the corresponding table in postgresql.  
+
+* Read in the table
+* for each column, get the class
+* use the class to make a decent assumption about what the column can be in psql
+
+
+
+
+```{r}
+
+pmeta <- function(the_table) {
+  the_names <- the_table %>% colnames()
+  the_class <- the_names
+  for (k in seq_along(the_names)) {
+    # cat(k)
+    the_class[k] <- the_table[[k]] %>% class()
+  }
+  data.frame(the_name=the_names , the_class=the_class, stringsAsFactors = FALSE)
+  
+}
+
+psql_map <- list()
+psql_map[["integer"]] <- "bigint"
+psql_map[["numeric"]] <- "real"
+psql_map[["Date"]]    <- "date"
+
+psql_meta <- function(the_table, the_table_name) {
+  result <- new.env(emptyenv())
+  
+  result$ppsql <- ppsql(the_table_name)
+  result$meta  <- pmeta(the_table)
+  
+  get_class <- function(the_class) {
+    result <- psql_map[[the_class]]
+    if (is.null(result)) result <- "varchar"
+    result
+  }
+  
+  
+  # return (result)
+  
+  x0 <- result$meta$the_class
+  for (k in seq_along(x0)) {
+    c0 <- get_class(result$meta$the_class[k]) 
+    x0[k] <- result$ppsql$make_column( result$meta$the_name[k], c0) 
+  }
+    
+  # for (k in seq_along(x0)) x0[k] <- result$meta$the_name[k]
+
+  result$meta %>% cbind(x0, stringsAsFactors=FALSE)
+  
+}
+
+x0 <- psql_meta(a18, "ACTVZ18")
+
+
+```
+
+
+
+```{r}
+
+
+
+x0 <- psql_meta(q0$my_tables$Activities[[16]], "Activities16")
+
+x0$x0 %>% writeLines()
+
+```
+
+
+# pre-convert .csv files
+
+e.g. blanks in integer columns become zeros
+
+
+
+```{r}
+
+psql_sanitize <- function(the_table) {
+  
+  for (k in seq_along(the_table)) {
+    the_class <- the_table[[k]] %>% class()
+    if (the_class == "integer" || the_class == "numeric") {
+      the_empty <- (the_table[[k]] == "") | (the_table[[k]] %>% is.na())
+      the_table[the_empty,k] <- 0
+    }
+    
+  }
+  
+  the_table
+  
+}
+
+a16 <- q0$my_tables$Activities[[16]] 
+a16h <- a16#  %>% head()
+a16hb <- a16h %>% psql_sanitize()
+
+a16hb %>% write.csv("a16.csv", row.names=FALSE)
+
+```
+
+
+
+
+
+
+
+## now do it for Activities[[18]].
+
+```{r}
+
+sink('make_activity_18.sql')
+
+q0$my_tables$Activities[[18]] %>% colnames() %>% map( p01$make_column ) %>% unlist() %>% writeLines()
+
+sink()
+
+```
+
+
+
+SELECT 
+  count(distinct "Activities18"."Agency_Activity_ID"), count("Activities18"."Agency_Activity_ID") 
+FROM 
+  public."Activities18" where "Activities18"."Agency_Activity_ID" ~ '^.10$' limit 19;
+
+
+```{r}
+
+library(odbc)
+con <- dbConnect(odbc::odbc(), .connection_string = "Driver={PostgreSQL Unicode};Database=mcfc01")
+```
+
+```{sql connection=con}
+
+-- ALTER TABLE public."Activities18" ADD COLUMN "Agency_Activity_ID_int" bigint;
+-- ALTER TABLE public."Activities18" ADD COLUMN "Agency_Code_int" bigint;
+
+UPDATE  public."Activities18" set "Agency_Activity_ID_int" = "Agency_Activity_ID"::int;  
+UPDATE  public."Activities18" set "Agency_Code_int" = "Agency_Code"::int;  
+
+SELECT count(*) from "public"."Activities18";
+
+
+```

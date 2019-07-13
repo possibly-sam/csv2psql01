@@ -1,0 +1,847 @@
+---
+title: "said"
+author: "Phillip Abbott"
+date: "June 28, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Said:  import USIT data and un-normalize projects
+
+```{r}
+
+library(tidyverse)
+
+said <- function() {
+  result <- new.env(emptyenv())
+
+  result$my_tables <- list()
+    
+  fn <- function(the_name, the_year) {
+    read_csv( paste0("20", the_year, "/", the_name, ".csv"))
+  }
+  
+  fn_all <- function(the_name, the_years=13:18) {
+  
+    result$my_tables[[the_name]] <- list()
+    for (year in the_years)
+      result$my_tables[[the_name]][[year]] <- fn(the_name, year)
+    
+  }
+  
+  
+  # result$my_tables[["Projects"]] <- list()
+  # result$my_tables[["Projects"]][[18]] <- result$fn("Projects", 18)
+  
+  fn_all("Projects")
+  fn_all("Activities")
+  fn_all("BusinessCase", 16:18)
+  result
+  
+  # where you were:  read in for each of the available files.  
+  # merge where possible:  expand to NA
+  # do the joins
+  
+}
+
+# Projects18 <- read_csv("2018/Projects.csv")
+
+# Projects18 %>% colnames()
+
+
+q0 <- said()
+
+q0 %>% ls.str()
+
+```
+
+
+```{r}
+
+# q0$my_tables$Projects[[17]] %>% colnames( ) %>% setdiff(q0$my_tables$Projects[[18]] %>% colnames( ))
+
+my_nice_col_names <- c(
+
+ "Unique Investment Identifier",   "Business Case ID"               ,"Agency Code"                   
+ ,"Agency Name"                  ,  "Investment Title"               ,"Unique Project ID"             
+ ,"Project ID"                    , "Agency Project ID"              ,"Project Name"                  
+ ,"Objectives / Expected Outcomes", "Start Date"                     ,"Completion Date"               
+ ,"Project Life Cycle Cost"        ,"SDLC Methodology"                              
+ ,"Release Every Six Mo"           ,"Release Every Six Mo Comment"           
+ ,"Schedule Variance (in days)"    ,"Schedule Variance (%)"          ,"Schedule Color"                
+ ,"Cost Variance ($ M)"            ,"Cost Variance (%)"              ,"Cost Color"                    
+ ,"Project Status"                 ,"Updated Date"                   ,"Updated Time"  
+)
+
+# remember to add the year.
+
+add_the_year <- function(the_data_frame, the_year) {
+  the_new_col <- rep(the_year,times=nrow(the_data_frame))
+  df <- data.frame(year=the_new_col)
+  colnames(df)[1] <- "year"
+  the_data_frame %>% bind_cols(df)
+  
+}
+
+p16 <- q0$my_tables$Projects[[16]][, my_nice_col_names]
+p16 <- p16 %>% add_the_year(16)
+p17 <- q0$my_tables$Projects[[17]][, my_nice_col_names]
+p17 <- p17 %>% add_the_year(17)
+
+p17$`Updated Date` <- p17$`Updated Date` %>% as.Date("%m/%d/%Y")
+
+p18 <- q0$my_tables$Projects[[18]][, my_nice_col_names]
+p18 <- p18 %>% add_the_year(18)
+p18$`Updated Date` <- p18$`Updated Date` %>% as.Date("%m/%d/%Y")
+
+
+punt <- function(the_data_frame, the_column_name) {
+  the_new_col <- rep(NA,times=nrow(the_data_frame))
+  df <- data.frame(the_column_name=the_new_col)
+  colnames(df)[1] <- the_column_name
+  the_data_frame %>% bind_cols(df)
+}
+
+
+p14 <- q0$my_tables$Projects[[14]]
+p14 <- p14 %>% punt("Project Life Cycle Cost" )
+p14 <- p14 %>% punt("SDLC Methodology" )
+p14 <- p14 %>% punt("Release Every Six Mo" )
+p14 <- p14 %>% punt("Release Every Six Mo Comment" )
+p14 <- p14 %>% punt("Project Status" )
+p14 <- p14[, my_nice_col_names]
+p14 <- p14 %>% add_the_year(14)
+
+p15 <- q0$my_tables$Projects[[15]]
+p15 <- p15 %>% punt("Project Life Cycle Cost" )
+p15 <- p15 %>% punt("SDLC Methodology" )
+p15 <- p15 %>% punt("Release Every Six Mo" )
+p15 <- p15 %>% punt("Release Every Six Mo Comment" )
+p15 <- p15 %>% punt("Project Status" )
+p15 <- p15[, my_nice_col_names]
+p15 <- p15 %>% add_the_year(15)
+
+
+pcombined <- p14
+pcombined <- pcombined %>% bind_rows(p15)
+pcombined <- pcombined %>% bind_rows(p16)
+pcombined <- pcombined %>% bind_rows(p17)
+pcombined <- pcombined %>% bind_rows(p18)
+
+pcombined %>% write.csv("projects_combined.csv")
+
+```
+> my_nice_col_names %>% setdiff( q0$my_tables$Projects[[15]] %>% colnames() )
+[1] "Project Life Cycle Cost"      "SDLC Methodology"             "Release Every Six Mo"        
+[4] "Release Every Six Mo Comment" "Project Status"   
+
+
+
+# Activities
+
+ok now that we have projects can we get activities.
+
+```{r}
+#  q0$my_tables$Activities[[17]] %>% colnames()
+
+
+my_nice_activity_col_names <- c(
+  
+ "Unique Investment Identifier"  ,"Business Case ID"             ,"Agency Code"                 
+ ,"Agency Name"                  ,"Investment Title"             ,"Agency Activity ID"          
+ ,"Project ID"                   ,"Activity Name"                ,"Activity Description"        
+ ,"Structure ID"                 
+ ,"Start Date Planned"           ,"Start Date Projected"         ,"Start Date Actual"           
+ ,"Completion Date Planned"      ,"Completion Date Projected"    ,"Completion Date Actual"      
+ ,"Total Costs Planned ($M)"     ,"Total Costs Projected ($M)"   ,"Total Costs Actual ($M)"     
+ ,"Schedule Variance (in days)"  ,"Schedule Variance Percent"    ,"Schedule Duration (in days)" 
+ ,"Cost Variance ($M)"           ,"Cost Variance Percent"        ,"Activity Status"             
+ ,"Has No Child Activity"        
+ ,"Baseline ID"                  ,"Unique Activity ID"          
+)
+
+cn <- function(n)  q0$my_tables$Activities[[n]] %>% colnames()
+
+cnn <- function(n) my_nice_activity_col_names %>% setdiff(cn(n))
+
+get_activity <- function(n) {
+  a14 <- q0$my_tables$Activities[[n]]
+  a14 <- a14[, my_nice_activity_col_names]
+  a14 <- a14 %>% add_the_year(n)
+  a14
+}
+
+a14 <- get_activity(14)
+a14$`Agency Activity ID` <- a14$`Agency Activity ID` %>% as.integer() 
+
+
+a15 <- q0$my_tables$Activities[[15]]
+a15 <- a15 %>% punt("Has No Child Activity" )
+a15$`Agency Activity ID` <- a15$`Agency Activity ID` %>% as.integer() 
+a15 <- a15[, my_nice_activity_col_names]
+a15 <- a15 %>% add_the_year(15)
+
+a16 <- get_activity(16)
+a16$`Agency Activity ID` <- a16$`Agency Activity ID` %>% as.integer() 
+a17 <- get_activity(17)
+a17$`Agency Activity ID` <- a17$`Agency Activity ID` %>% as.integer() 
+a17$`Start Date Planned` <- a17$`Start Date Planned` %>% as.character()
+a17$`Completion Date Planned` <- a17$`Completion Date Planned` %>% as.character()
+a17$`Start Date Projected` <- a17$`Start Date Projected` %>% as.character()
+a17$`Completion Date Projected` <- a17$`Completion Date Projected` %>% as.character()
+a17$`Start Date Actual` <- a17$`Start Date Actual` %>% as.character()
+a17$`Completion Date Actual` <- a17$`Completion Date Actual` %>% as.character()
+a17$`Has No Child Activity` <- a17$`Has No Child Activity` %>% as.integer()
+a18 <- get_activity(18)
+a18$`Agency Activity ID` <- a18$`Agency Activity ID` %>% as.integer()
+a18$`Start Date Planned` <- a18$`Start Date Planned` %>% as.character()
+a18$`Completion Date Planned` <- a18$`Completion Date Planned` %>% as.character()
+a18$`Start Date Projected` <- a18$`Start Date Projected` %>% as.character()
+a18$`Completion Date Projected` <- a18$`Completion Date Projected` %>% as.character()
+a18$`Start Date Actual` <- a18$`Start Date Actual` %>% as.character()
+a18$`Completion Date Actual` <- a18$`Completion Date Actual` %>% as.character()
+a18$`Has No Child Activity` <- a18$`Has No Child Activity` %>% as.integer()
+
+acombined <- a14
+acombined <- acombined %>% bind_rows(a15)
+acombined <- acombined %>% bind_rows(a16)
+acombined <- acombined %>% bind_rows(a17)
+acombined <- acombined %>% bind_rows(a18)
+
+acombined %>% write.csv("activities_combined.csv")
+
+```
+
+
+# All together now
+
+
+```{r}
+
+activities_and_projects <- acombined %>% left_join(pcombined, by=c("Project ID", "year"))
+
+activities_and_projects %>% write.csv("activities_joined_with_project.csv")
+
+```
+
+
+
+# Business Cases
+
+```{r}
+
+bc <- function(n)  q0$my_tables$BusinessCase[[n]] %>% colnames()
+
+my_nice_business_case_col_names <- bc(16) %>% intersect(bc(17)) %>% intersect(bc(18))
+
+get_bus_case <- function(n) {
+  bc <- q0$my_tables$BusinessCase[[n]]
+  bc <- bc[, my_nice_business_case_col_names]
+  bc <- bc %>% add_the_year(n)
+  bc
+}
+
+bc16 <- get_bus_case(16)
+bc16$`Date of Last Update to CIO Evaluation` <- bc16$`Date of Last Update to CIO Evaluation` %>% as.Date("%m/%d/%Y")
+bc16$`Date of Last Change to CIO Evaluation` <- bc16$`Date of Last Change to CIO Evaluation` %>% as.Date("%m/%d/%Y")
+bc16$`Date of Last Baseline` <- bc16$`Date of Last Baseline` %>% as.Date("%m/%d/%Y")
+bc16$`Date of Last Change to Activities` <- bc16$`Date of Last Change to Activities` %>% as.Date("%m/%d/%Y")
+bc16$`Date of Last Update to Activities` <- bc16$`Date of Last Update to Activities` %>% as.Date("%m/%d/%Y")
+bc16$`Date of Last Change to Performance Metrics` <- bc16$`Date of Last Change to Performance Metrics` %>% as.Date("%m/%d/%Y")
+bc16$`Date of Last Update to Performance Metric Actuals` <- bc16$`Date of Last Update to Performance Metric Actuals` %>% as.Date("%m/%d/%Y")
+bc16$`Investment Auto Submission Date` <- bc16$`Investment Auto Submission Date` %>% as.Date("%m/%d/%Y")
+
+
+bc17 <- get_bus_case(17)
+bc17$`Date of Last Update to CIO Evaluation` <- bc17$`Date of Last Update to CIO Evaluation` %>% as.Date("%m/%d/%Y")
+bc17$`Date of Last Change to CIO Evaluation` <- bc17$`Date of Last Change to CIO Evaluation` %>% as.Date("%m/%d/%Y")
+bc17$`Date of Last Baseline` <- bc17$`Date of Last Baseline` %>% as.Date("%m/%d/%Y")
+bc17$`Date of Last Change to Activities` <- bc17$`Date of Last Change to Activities` %>% as.Date("%m/%d/%Y")
+bc17$`Date of Last Update to Activities` <- bc17$`Date of Last Update to Activities` %>% as.Date("%m/%d/%Y")
+bc17$`Date of Last Change to Performance Metrics` <- bc17$`Date of Last Change to Performance Metrics` %>% as.Date("%m/%d/%Y")
+bc17$`Date of Last Update to Performance Metric Actuals` <- bc17$`Date of Last Update to Performance Metric Actuals` %>% as.Date("%m/%d/%Y")
+bc17$`Investment Auto Submission Date` <- bc17$`Investment Auto Submission Date` %>% as.Date("%m/%d/%Y")
+
+bc18 <- get_bus_case(18)
+bc18$`Date of Last Update to CIO Evaluation` <- bc18$`Date of Last Update to CIO Evaluation` %>% as.Date("%m/%d/%Y")
+bc18$`Date of Last Change to CIO Evaluation` <- bc18$`Date of Last Change to CIO Evaluation` %>% as.Date("%m/%d/%Y")
+bc18$`Date of Last Baseline` <- bc18$`Date of Last Baseline` %>% as.Date("%m/%d/%Y")
+bc18$`Date of Last Change to Activities` <- bc18$`Date of Last Change to Activities` %>% as.Date("%m/%d/%Y")
+bc18$`Date of Last Update to Activities` <- bc18$`Date of Last Update to Activities` %>% as.Date("%m/%d/%Y")
+bc18$`Date of Last Change to Performance Metrics` <- bc18$`Date of Last Change to Performance Metrics` %>% as.Date("%m/%d/%Y")
+bc18$`Date of Last Update to Performance Metric Actuals` <- bc18$`Date of Last Update to Performance Metric Actuals` %>% as.Date("%m/%d/%Y")
+bc18$`Investment Auto Submission Date` <- bc18$`Investment Auto Submission Date` %>% as.Date("%m/%d/%Y")
+
+
+bccombined <- bc16
+bccombined <- bccombined %>% bind_rows(bc17)
+bccombined <- bccombined %>% bind_rows(bc18)
+
+
+```
+
+
+
+
+# All together + Business Case
+
+
+```{r}
+
+
+activities_and_projects_and_business_case <- activities_and_projects %>% left_join(bccombined, by=c("Business Case ID.x"="Business Case ID", "year"))
+
+activities_and_projects_and_business_case %>% write.csv("activities_joined_with_projects_joined_with_business_case.csv")
+
+```
+
+
+# clean up some duplication
+
+```{r}
+
+a0 <- activities_and_projects_and_business_case
+
+a0  %>% colnames() %>% sort()
+
+eq <- function(lhs, rhs) {
+  if (is.na(lhs) && is.na(rhs)) return(true)
+  lhs==rhs
+}
+
+a0 $`Agency Code` %>%eq( a0$`Agency Code.x`)
+
+my_check <- function(a, b) ( a0[,a] == a0[,b]) %>% all()
+
+mc2 <- function(a) my_check(paste0(a,".x"), paste0(a,".y"))
+
+mc2( "Unique Investment Identifier")
+
+
+
+ap0 <- activities_and_projects
+
+ap0 <- ap0 %>% select(-"Agency Code.y")
+ap0 <- ap0 %>% rename("Agency Code"= "Agency Code.x")
+
+ap0 <- ap0 %>% select(-"Agency Name.y")
+ap0 <- ap0 %>% rename("Agency Name"= "Agency Name.x")
+
+ap0 <- ap0 %>% select(-"Business Case ID.y")
+ap0 <- ap0 %>% rename("Business Case ID"= "Business Case ID.x")
+
+
+
+ap0 <- ap0 %>% select(-"Unique Investment Identifier.y")
+ap0 <- ap0 %>% rename("Unique Investment Identifier"= "Unique Investment Identifier.x")
+
+
+activities_and_projects_and_business_case <- ap0 %>% left_join(bccombined, by=c("Business Case ID", "year"))
+
+activities_and_projects_and_business_case %>% write.csv("activities_joined_with_projects_joined_with_business_case.csv")
+
+
+```
+
+
+ [6] "Agency Code.x"                                    
+ [7] "Agency Code.y"                                    
+ [9] "Agency Name.x"                                    
+[10] "Agency Name.y"                                    
+[17] "Business Case ID.x"                               
+[18] "Business Case ID.y"                               
+ 
+[78] "Unique Investment Identifier.x"                   
+[79] "Unique Investment Identifier.y"                   
+   
+# Cleaning up APB
+
+```{r}
+
+apb0 <- activities_and_projects_and_business_case
+
+my_check3 <- function(a, b) ( apb0[,a] == apb0[,b]) %>% all()
+
+mc3 <- function(a) my_check3(paste0(a,".x"), paste0(a,".y"))
+
+mc3( "Agency Name")
+
+
+```
+
+
+
+
+
+
+# on the day of 
+
+* Create Faux numeric columns
+* generate clustering
+
+```{r}
+
+library(stats)
+library(tidyverse)
+library(class)
+
+g_size = 99
+idx <- 1:g_size
+fib_ <- c(0,1, 2, 3, 5, 8)
+fib <- function() sample(fib_, g_size, TRUE)
+ct <- function() (runif(g_size) * 1000) %>% floor()
+the_data_frame <- data.frame(idx=idx, holy=fib(), grail=fib(), life=fib(), brian=fib(), cost=ct(), schedule=ct())
+
+
+
+
+q0 <- kmeans(the_data_frame[,2:5],2)
+
+the_data_frame <- the_data_frame %>% cbind(cluster=q0$cluster)
+
+plot( the_data_frame$schedule ~ the_data_frame$cost,col=the_data_frame$cluster )
+
+the_data_frame %>% write.csv("faux_clustering.csv")
+
+```
+
+
+
+# now do the same thing except for KNN 
+
+```{r}
+
+library(tidyverse)
+
+g_size = 99
+idx <- 1:g_size
+fib_ <- c(0,1, 2, 3, 5, 8)
+fib <- function() sample(fib_, g_size, TRUE)
+ct <- function() (runif(g_size) * 1000) %>% floor()
+
+
+
+the_training_set <- data.frame(idx=idx, holy=fib(), grail=fib(), life=fib(), brian=fib(), cost=ct(), schedule=ct())
+
+the_test_set <- data.frame(idx=idx, holy=fib(), grail=fib(), life=fib(), brian=fib(), cost=ct(), schedule=ct())
+
+
+get_category <- function(cost, schedule) {
+  if (cost > 500 && schedule > 500) return(4)
+  if (cost < 500 && schedule < 500) return(1)
+  if (cost > 500) return (3)
+  2
+}
+
+the_categories <- 1:g_size
+for (k in 1:g_size) the_categories[k] <- get_category(the_training_set$cost[k], the_training_set$schedule[k])
+
+
+the_training_set <- the_training_set %>% cbind(category=the_categories)
+
+knn(the_training_set[,2:5], the_test_set[,2:5], the_categories)
+
+plot()
+
+```
+
+
+
+# OK, lets looks at the n-grams
+## START HERE
+
+```{r}
+
+library(tidyverse)
+library(stats)
+library(readr)
+
+wwc <- read_csv("with_word_counts_v3.csv")
+
+
+colnames(wwc)
+
+wwc0 <- wwc[, c(8, 30, 20,23, 81:240)]
+
+# don't worry about stuff for which we possess no cost or schedule data
+wwc0 <- wwc0[!is.na(wwc0$`Total Costs Actual ($M)`),]
+# kill the outliers just to make it look better
+wwc0 <- wwc0[wwc0$`Total Costs Actual ($M)` < 1000, ]
+wwc0 <- wwc0[!is.na(wwc0$`Schedule Duration (in days)`),]
+
+
+q0 <- kmeans(wwc0[,5:43],2)
+
+plot(wwc0$`Total Costs Actual ($M)`~wwc0$`Schedule Duration (in days)`, col=q0$cluster)
+
+q0$centers
+
+write.csv(q0$centers, "centers2.csv")
+
+```
+
+
+# no really we have to have good categories
+
+```{r}
+
+cs0 <- wwc0$`Total Costs Actual ($M)` %>% summary()
+ss0 <- wwc0$`Schedule Duration (in days)` %>% summary()
+
+# use 3rd quartile as a cutoff
+cost_cutoff <- 1.04
+schedule_cutoff <- 190
+
+# need more granular categories
+
+get_quartile <- function(s, x) {
+  # s <- pop%>% summary()
+  s25 <- s[2]
+  s50 <- s[3]
+  s75 <- s[5]
+  
+  if (x < s25) return(1)
+  if (x < s50) return(2)
+  if (x < s75) return(3)
+  4
+}
+
+
+cost_summary      <- wwc0$`Total Costs Actual ($M)`     %>% summary()
+schedule_summary  <- wwc0$`Schedule Duration (in days)` %>% summary()
+
+
+get_category <- function(cost, schedule) {
+
+c <- cost_summary %>% get_quartile(cost)
+s <- schedule_summary %>% get_quartile(schedule)
+
+c*s
+  
+}
+
+t0 <- 1:( wwc0 %>% nrow() )
+the_category <- t0 %>% map( function(k) get_category( wwc0$`Total Costs Actual ($M)`[k], wwc0$`Schedule Duration (in days)`[k])) 
+
+the_category <- the_category %>% unlist()
+
+
+```
+
+
+{azure trial license = qdwyy88zx5jzebucfz}
+
+
+government united modelling budgets yested 
+```{r}
+# 87k items.
+
+n0 <- 1000
+
+s0 <- 10
+
+t0 <- 1:n0+1
+
+the_training_set <- wwc0[t0,]
+the_test_set <- wwc0[1:(2*n0+1),]
+
+
+q0 <- class::knn(the_training_set[,5:(10*s0)], the_test_set[,5:(10*s0)], the_category[t0], k=s0)
+
+q0 %>% table() %>% pie()
+
+my_colorsa <- heat.colors(16)
+my_colorsb <- topo.colors(16)
+my_colors <- c(topo.colors(8), heat.colors(8) )
+
+plot(log(the_test_set$`Total Costs Actual ($M)`)~log(the_test_set$`Schedule Duration (in days)`),
+    main='Clustering', xlab='Duration', ylab='Cost', col=my_colors[q0] )
+
+
+
+
+```
+
+
+
+
+
+```{r}
+
+
+q1 <- q0[t0] %>% as.numeric()
+
+
+x0 <- log(the_test_set$`Schedule Duration (in days)`[q1>1])
+y0 <- log(the_test_set$`Total Costs Actual ($M)`[q1>1])
+
+
+
+points( x0, y0 , pch='x', col='blue', cex=2)
+
+
+
+it0 <- ((q1>2) %>% which())[1]
+x0 <- log(the_test_set$`Schedule Duration (in days)`[it0])
+y0 <- log(the_test_set$`Total Costs Actual ($M)`[it0])
+
+
+
+points( x0, y0 , pch=17, col='red', cex=3)
+
+
+```
+
+
+
+# Later:  week 27
+
+make a database column based on the column of the table.
+
+
+
+```{r}
+
+ppsql <- function(the_table_name) {
+  result <- new.env(emptyenv())
+  
+  kill <- function(it, s, target='') gsub(s,target, it, fixed=TRUE)
+  
+  bad_characters <- c(' ', '(', ')', '$', '.', ',', '%')
+  
+  get_safe_name <- function(it) {
+    for (k in bad_characters) it <- it %>% kill(k, '_')
+    it
+  }
+  
+  enquote <- function(it) paste0('"', it, '"')
+  result$make_column <- function(the_column_name, the_type='character varying') {
+    the_column_name <- the_column_name %>% get_safe_name()
+    paste('ALTER TABLE', paste0('public.', the_table_name %>% enquote()), 'ADD COLUMN', the_column_name %>% enquote(), the_type , ';')
+  }
+  
+  result
+}
+
+
+p01 <- ppsql('R02')
+'asdf' %>% p01$make_column() %>% writeLines()
+
+# ALTER TABLE public."Risks01" ADD COLUMN "Description" character varying;
+
+
+```
+
+
+## now do it for Activities[[18]].
+
+```{r}
+
+sink('make_activity_18.sql')
+
+q0$my_tables$Activities[[18]] %>% colnames() %>% map( p01$make_column ) %>% unlist() %>% writeLines()
+
+sink()
+
+```
+
+
+
+SELECT 
+  count(distinct "Activities18"."Agency_Activity_ID"), count("Activities18"."Agency_Activity_ID") 
+FROM 
+  public."Activities18" where "Activities18"."Agency_Activity_ID" ~ '^.10$' limit 19;
+
+
+```{r}
+
+library(odbc)
+con <- dbConnect(odbc::odbc(), .connection_string = "Driver={PostgreSQL Unicode};Database=mcfc01")
+```
+
+```{sql connection=con}
+
+-- ALTER TABLE public."Activities18" ADD COLUMN "Agency_Activity_ID_int" bigint;
+-- ALTER TABLE public."Activities18" ADD COLUMN "Agency_Code_int" bigint;
+
+UPDATE  public."Activities18" set "Agency_Activity_ID_int" = "Agency_Activity_ID"::int;  
+UPDATE  public."Activities18" set "Agency_Code_int" = "Agency_Code"::int;  
+
+SELECT count(*) from "public"."Activities18";
+
+
+```
+
+
+
+
+
+
+
+```{r}
+
+ 
+
+ 
+
+ 
+
+f2 <- function(n=9, f0=function(nn) 1/nn, a=1) {
+
+ 
+
+  result <- new.env(emptyenv())
+
+ 
+
+  fn <- function(nn ) c( a*( 1-f0(nn) ),  a*( 1+f0(nn) ))
+
+ 
+
+  t0 <- 1:n
+
+  x0 <- t0 %>% fn()
+
+  x0 <- c(a,x0)
+
+  x0 <- x0 %>% sort()
+
+ 
+
+  result$plotme <- function() {
+
+    x0 %>% plot(col='white')
+
+    x0 %>% map( function(it) abline(h=it))
+
+  }
+
+ 
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  ff <- function(n, by=16) {
+
+    a <- floor(n)
+
+    n <- n - a
+
+    n <- by*n
+
+    n <- round(n)
+
+    c(whole=a,sixteents=n)
+
+  }
+
+ 
+
+  result$get_points <- function(by=16) {
+
+    whole_part=floor(x0)
+
+    x0 <- x0 - whole_part
+
+    x0 <- x0*by
+
+    x0 <- round(x0)
+
+   
+
+    data.frame(whole_part=whole_part, fractional_part=x0)
+
+ 
+
+  }
+
+ 
+
+  result
+
+ 
+
+}
+
+ 
+
+q0 <- f2()
+
+ 
+
+q0$plotme()
+
+ 
+
+```
+
+ 
+
+ 
+
+ 
+
+ 
+
+```{r}
+
+ 
+
+ 
+
+phi <- (sqrt(5)-1)/2
+
+ 
+
+ 
+
+q0 <- f2(9,function(n) phi^(n-1), a=3)
+
+ 
+
+q0$plotme()
+
+ 
+
+q0$get_points()
+
+ 
+
+```
+
+ 
+
+Best regards,
+
+ 
+
+Phillip Abbott
+
+ 
+
+phillip.abbott@shell.com
+
+Work:      020 3023 3205
+
+Cell:      079 4935 0714
+
+ 
+
+
+
+
+
