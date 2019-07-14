@@ -31,22 +31,51 @@ ui <- fluidPage(
    
    # Application title
    titlePanel("CSV --> PSQL"),
-   
-   actionButton("go", "Go!"),
+   textInput("some_file", "Some File", "~/Desktop/XIX/wk-26/Hackathon 3.0/oxford university/challenge 9,10/said business school/2016/Activities.csv" ),
+   textInput("table_name", "Table Name", "Activities16"),
+  actionButton("go", "Go!"),
    
    tableOutput("said")
    
 )
 
+
+
+
+m_stuff <- "silly"
+
+# /home/phillip/Desktop/XIX/wk-26/Hackathon 3.0/oxford university/challenge 9,10/said business school/2016/Activities.csv
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
  
+  
+  
+  x0 <- reactive({
+    result <- read.csv(input$some_file)
+    result <- result %>% psql_sanitize()
+    result %>% write.csv("out.csv")
+    result
 
-   output$said <- renderTable( data.frame(x=1:10, y=1:10)) #my_csv_dictionary$said$my_tables$Activities[[16]] %>% head() )
-   
-   
+  })
+  
+  x1 <- reactive( {
+    result <- psql_meta(x0(), input$table_name)
+    result
+  })
+  
+   output$said <- renderTable(  { 
+     x1() 
+   }     ) 
    
    observeEvent(input$go, {
+
+     x0 <- read.csv(input$some_file)
+     x0 <- psql_sanitize(x0)
+     x0 %>% write.csv("out.csv")
+     
+     x1 <- psql_meta(x0, input$table_name)
+     m_stuff <- x1$x0
+
      session$sendCustomMessage(type = 'testmessage',
                                message = 'Thank you for clicking')
    })   
